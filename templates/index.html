@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyWatch AI | Enterprise Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
+        :root {
+            --primary: #00e5ff;
+            --secondary: #2979ff;
+            --bg: #020617;
+            --card: #0f172a;
+            --border: rgba(255, 255, 255, 0.08);
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            padding: 40px 24px;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 48px;
+        }
+
+        .nav-link {
+            padding: 14px 18px; border-radius: 12px;
+            color: var(--text-dim); cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; gap: 14px; font-weight: 600; margin-bottom: 8px;
+        }
+
+        .nav-link:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+        .nav-link.active { background: var(--secondary); color: white; box-shadow: 0 10px 20px -5px rgba(41, 121, 255, 0.4); }
+
+        /* View Management */
+        .main-view { padding: 40px; overflow-y: auto; position: relative; }
+        .content-section { display: none; animation: slideUp 0.4s cubic-bezier(0, 0, 0.2, 1); }
+        .content-section.active { display: block; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Bento Cards */
+        .bento-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; }
+        .bento-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 32px; }
+
+        /* Input Styles */
+        input {
+            width: 100%; padding: 16px; background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border); border-radius: 14px; color: white; margin: 8px 0 24px 0;
+            box-sizing: border-box;
+        }
+        .btn-action {
+            width: 100%; padding: 18px; border-radius: 14px; border: none;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: white; font-weight: 800; cursor: pointer;
+        }
+
+        /* Topology Visualizer */
+        .topology-node {
+            background: rgba(41, 121, 255, 0.1); border: 1px solid var(--secondary);
+            padding: 15px; border-radius: 12px; margin: 10px 0; text-align: center;
+        }
+
+        /* Data Logs Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; color: var(--text-dim); padding: 15px; border-bottom: 1px solid var(--border); }
+        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <aside class="sidebar">
+        <div class="brand"><i class="fas fa-shield-virus"></i> SKYWATCH AI</div>
+        
+        <div class="nav-link active" onclick="showSection('console', this)">
+            <i class="fas fa-grip-vertical"></i> Analysis Console
+        </div>
+        <div class="nav-link" onclick="showSection('logs', this)">
+            <i class="fas fa-layer-group"></i> Dataset Logs
+        </div>
+        <div class="nav-link" onclick="showSection('topology', this)">
+            <i class="fas fa-project-diagram"></i> Model Topology
+        </div>
+    </aside>
+
+    <main class="main-view">
+        <section id="console" class="content-section active">
+            <h1 style="font-weight: 800; margin: 0 0 40px 0;">Predictive Intelligence</h1>
+            <div class="bento-grid">
+                <div class="bento-card">
+                    <h3 style="margin-top:0">Parameters</h3>
+                    <form action="/predict" method="post">
+                        <label>Temperature (°C)</label>
+                        <input type="number" step="0.01" name="temp" placeholder="28.5" required>
+                        <label>Humidity (%)</label>
+                        <input type="number" step="0.01" name="hum" placeholder="55" required>
+                        <label>PM2.5</label>
+                        <input type="number" step="0.01" name="pm25" placeholder="105" required>
+                        <label>NO2</label>
+                        <input type="number" step="0.01" name="no2" placeholder="42" required>
+                        <button type="submit" class="btn-action">EXECUTE FORECAST</button>
+                    </form>
+                </div>
+                <div class="bento-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    {% if prediction_text %}
+                        <div style="font-size: 5rem; font-weight: 800; color: var(--primary);">{{ prediction_text.split(': ')[1] }}</div>
+                        <div style="font-weight: 700; opacity: 0.7;">{{ status.split(': ')[1] }}</div>
+                    {% else %}
+                        <i class="fas fa-bolt fa-4x" style="opacity: 0.1;"></i>
+                        <p style="color: var(--text-dim);">Awaiting Execution...</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section id="logs" class="content-section">
+            <h1 style="font-weight: 800; margin: 0 0 40px 0;">Ingestion Logs</h1>
+            <div class="bento-card">
+                <table>
+                    <thead>
+                        <tr><th>Source</th><th>Entries</th><th>Quality Score</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>CPCB Main Station</td><td>842,401</td><td>98.2%</td><td style="color:#00ff88">Verified</td></tr>
+                        <tr><td>Kaggle Global Set</td><td>1,200,000</td><td>94.5%</td><td style="color:#00ff88">Verified</td></tr>
+                        <tr><td>Local Sensor Node</td><td>12,500</td><td>82.1%</td><td style="color:#ffcc00">Pending</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="topology" class="content-section">
+            <h1 style="font-weight: 800; margin: 0 0 40px 0;">Model Topology</h1>
+            <div class="bento-grid">
+                <div class="bento-card">
+                    <h3>Random Forest Architecture</h3>
+                    <div class="topology-node">Input Layer (4 Features)</div>
+                    <div style="text-align: center; color: var(--text-dim);">▼</div>
+                    <div class="topology-node">Ensemble: 50 Decision Trees</div>
+                    <div style="text-align: center; color: var(--text-dim);">▼</div>
+                    <div class="topology-node">Hyperparameter: max_depth=8</div>
+                    <div style="text-align: center; color: var(--text-dim);">▼</div>
+                    <div class="topology-node">Output: AQI Regressor Value</div>
+                </div>
+                <div class="bento-card">
+                    <h3>Topology Metadata</h3>
+                    <p style="color: var(--text-dim);">The ensemble utilizes a bagging approach where each tree is trained on a bootstrap sample of the dataset.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    function showSection(sectionId, element) {
+        // Hide all sections
+        document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+        // Show target section
+        document.getElementById(sectionId).classList.add('active');
+        
+        // Handle Sidebar CSS
+        document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    // Keep active view on prediction
+    {% if prediction_text %}
+        window.onload = function() {
+            showSection('console', document.querySelector('.nav-link'));
+        }
+    {% endif %}
+</script>
+
+</body>
+</html>
